@@ -114,21 +114,30 @@ func TestScalarOverrideAndListMerge(t *testing.T) {
 	}
 }
 
-func TestAgentArgsConcatenateAcrossLayers(t *testing.T) {
+func TestAgentArgsHigherLayerReplaces(t *testing.T) {
 	home := "/home/u"
-	global := "agents:\n  claude:\n    args: [--add-dir, /a]\n"
-	local := "agents:\n  claude:\n    args: [--add-dir, /b]\nprofiles:\n  fast:\n    agents:\n      claude:\n        args: [--model, haiku]\n"
-	cfg, _, err := loadFrom(t, home, global, "", local, "fast")
-	if err != nil {
-		t.Fatal(err)
-	}
-	want := []string{"--add-dir", "/a", "--add-dir", "/b", "--model", "haiku"}
-	if !slices.Equal(cfg.AgentArgs(), want) {
-		t.Errorf("agents.claude.args = %v, want %v (concatenated, not deduplicated)", cfg.AgentArgs(), want)
+	global := "agents:\n  claude:\n    args: [--model, opus]\n"
+	project := "agents:\n  claude:\n    args: [--add-dir, /a, --add-dir, /b]\n"
+	local := "profiles:\n  fast:\n    agents:\n      claude:\n        args: [--model, haiku]\n  bare:\n    agents:\n      claude:\n        args: []\n"
+	for _, tc := range []struct {
+		profiles []string
+		want     []string
+	}{
+		{nil, []string{"--add-dir", "/a", "--add-dir", "/b"}},
+		{[]string{"fast"}, []string{"--model", "haiku"}},
+		{[]string{"bare"}, []string{}},
+	} {
+		cfg, _, err := loadFrom(t, home, global, project, local, tc.profiles...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !slices.Equal(cfg.AgentArgs(), tc.want) {
+			t.Errorf("profiles %v: agents.claude.args = %v, want %v", tc.profiles, cfg.AgentArgs(), tc.want)
+		}
 	}
 }
 
-func TestProfileAgentArgsConcatenateAcrossLayers(t *testing.T) {
+func TestProfileAgentArgsHigherLayerReplaces(t *testing.T) {
 	home := "/home/u"
 	global := "profiles:\n  p:\n    agents:\n      claude:\n        args: [--add-dir, /a]\n"
 	local := "profiles:\n  p:\n    agents:\n      claude:\n        args: [--add-dir, /b]\n"
@@ -136,7 +145,7 @@ func TestProfileAgentArgsConcatenateAcrossLayers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"--add-dir", "/a", "--add-dir", "/b"}
+	want := []string{"--add-dir", "/b"}
 	if !slices.Equal(cfg.AgentArgs(), want) {
 		t.Errorf("agents.claude.args = %v, want %v", cfg.AgentArgs(), want)
 	}

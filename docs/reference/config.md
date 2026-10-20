@@ -9,7 +9,7 @@
 | 3     | `.corral.yml`                                                         | Intended to be commited with the project as project-scoped defaults |
 | 4     | `.corral.local.yml`                                                   | Intended to be gitignored, personal project-scoped settings         |
 
-All settings (profiles too) are merged with lists being appended and uniqued so they can't contain duplicate entries. [`agents.claude.args`](#agentsclaudeargs) is the exception: its layers are appended without removing duplicates. The config syntax is checked and corral aborts when it's invalid.
+All settings (profiles too) are merged with lists being appended and uniqued so they can't contain duplicate entries. [`agents.claude.args`](#agentsclaudeargs) is the exception: the highest layer or profile that sets it replaces the whole list. The config syntax is checked and corral aborts when it's invalid.
 
 Run [`corral validate`](commands.md#corral-validate) to list loaded config files and inspect the effective configuration.
 
@@ -206,8 +206,8 @@ checks this variable before loading account or organization connectors.
 - **Type:** list of strings
 - **Default:** `[]`
 - **Behavior:** arguments that `corral run` passes to Claude Code, before any arguments
-  given after `--`. Each list entry is one argument. Config layers and profiles append
-  their entries in order and keep duplicates, so a flag can repeat across layers.
+  given after `--`. Each list entry is one argument. The highest config layer or profile
+  that sets `args` replaces the list from lower layers; `args: []` clears it.
 
 ```yaml
 agents:
