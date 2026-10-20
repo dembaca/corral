@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -110,6 +111,34 @@ func TestScalarOverrideAndListMerge(t *testing.T) {
 	// duplicates dropped). paths.ro defaults to [], so this is clean.
 	if strings.Join(cfg.Providers.Paths.RO, ",") != "/a,/b,/c" {
 		t.Errorf("paths.ro = %v, want [/a /b /c] (append-unique merge)", cfg.Providers.Paths.RO)
+	}
+}
+
+func TestAgentArgsConcatenateAcrossLayers(t *testing.T) {
+	home := "/home/u"
+	global := "agents:\n  claude:\n    args: [--add-dir, /a]\n"
+	local := "agents:\n  claude:\n    args: [--add-dir, /b]\nprofiles:\n  fast:\n    agents:\n      claude:\n        args: [--model, haiku]\n"
+	cfg, _, err := loadFrom(t, home, global, "", local, "fast")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"--add-dir", "/a", "--add-dir", "/b", "--model", "haiku"}
+	if !slices.Equal(cfg.AgentArgs(), want) {
+		t.Errorf("agents.claude.args = %v, want %v (concatenated, not deduplicated)", cfg.AgentArgs(), want)
+	}
+}
+
+func TestProfileAgentArgsConcatenateAcrossLayers(t *testing.T) {
+	home := "/home/u"
+	global := "profiles:\n  p:\n    agents:\n      claude:\n        args: [--add-dir, /a]\n"
+	local := "profiles:\n  p:\n    agents:\n      claude:\n        args: [--add-dir, /b]\n"
+	cfg, _, err := loadFrom(t, home, global, "", local, "p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"--add-dir", "/a", "--add-dir", "/b"}
+	if !slices.Equal(cfg.AgentArgs(), want) {
+		t.Errorf("agents.claude.args = %v, want %v", cfg.AgentArgs(), want)
 	}
 }
 

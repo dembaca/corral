@@ -43,3 +43,16 @@ func TestValidationFields(t *testing.T) {
 		}
 	}
 }
+
+func TestValidationFieldsArgs(t *testing.T) {
+	fields := Config{AttributionHeader: true, Args: []string{"--model", "sonnet"}}.ValidationFields()
+	last := fields[len(fields)-1]
+	if last.Label != "Args" || last.Value != "--model sonnet" {
+		t.Errorf("last field = %+v, want Args: --model sonnet", last)
+	}
+	for _, f := range (Config{AttributionHeader: true}).ValidationFields() {
+		if f.Label == "Args" {
+			t.Errorf("Args field shown without args: %+v", f)
+		}
+	}
+}

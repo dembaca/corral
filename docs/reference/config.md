@@ -9,7 +9,7 @@
 | 3     | `.corral.yml`                                                         | Intended to be commited with the project as project-scoped defaults |
 | 4     | `.corral.local.yml`                                                   | Intended to be gitignored, personal project-scoped settings         |
 
-All settings (profiles too) are merged with lists being appended and uniqued so they can't contain duplicate entries. The config syntax is checked and corral aborts when it's invalid.
+All settings (profiles too) are merged with lists being appended and uniqued so they can't contain duplicate entries. [`agents.claude.args`](#agentsclaudeargs) is the exception: its layers are appended without removing duplicates. The config syntax is checked and corral aborts when it's invalid.
 
 Run [`corral validate`](commands.md#corral-validate) to list loaded config files and inspect the effective configuration.
 
@@ -36,6 +36,7 @@ agents:
     feedbackSurvey: false
     attributionHeader: true
     agentView: false
+    args: []
 providers:
   block:
     directories: []
@@ -199,6 +200,22 @@ checks this variable before loading account or organization connectors.
 > All six settings use environment variables corral **reserves** (see
 > [`providers.env`](#providersenv)), so an `env.set` entry cannot change them. Use the
 > corresponding `agents.claude` setting instead.
+
+### `agents.claude.args`
+
+- **Type:** list of strings
+- **Default:** `[]`
+- **Behavior:** arguments that `corral run` passes to Claude Code, before any arguments
+  given after `--`. Each list entry is one argument. Config layers and profiles append
+  their entries in order and keep duplicates, so a flag can repeat across layers.
+
+```yaml
+agents:
+  claude:
+    args: [--model, sonnet, --add-dir, ../shared]
+```
+
+`corral run -- --resume` then starts `claude --model sonnet --add-dir ../shared --resume`.
 
 ### `agents.pi`
 

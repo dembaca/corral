@@ -16,3 +16,5 @@ func (Config) SandboxEnv() map[string]string {
 }
 
 func (Config) ValidationFields() []spec.BannerField { return nil }
+
+func (Config) LaunchArgs() []string { return nil }

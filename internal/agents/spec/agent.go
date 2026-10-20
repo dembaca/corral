@@ -32,6 +32,8 @@ type BannerField struct {
 type AgentConfig interface {
 	SandboxEnv() map[string]string
 	ValidationFields() []BannerField
+	// LaunchArgs are passed to the agent before the `corral run -- ...` arguments.
+	LaunchArgs() []string
 }
 
 type Launch struct {

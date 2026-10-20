@@ -108,6 +108,10 @@ func (c *Config) AgentEnv() map[string]string {
 	return c.agentConfig().SandboxEnv()
 }
 
+func (c *Config) AgentArgs() []string {
+	return c.agentConfig().LaunchArgs()
+}
+
 func (c *Config) AgentValidationFields() []agents.BannerField {
 	return c.agentConfig().ValidationFields()
 }
@@ -229,6 +233,7 @@ agents:
     feedbackSurvey: false
     attributionHeader: true
     agentView: false
+    args: []
 providers:
   # --- built-in providers: always active, applied before the feature providers ---
   # Paths the sandbox masks and the hook denies, split by kind: directories are masked
@@ -679,18 +684,27 @@ func parseYAMLMap(data []byte) (map[string]any, error) {
 // deliberate: a higher layer can extend a list but never drop what a lower
 // layer set, so the built-in defaults always apply.
 func mergeMap(base, over map[string]any) map[string]any {
+	return mergeMapAt(nil, base, over)
+}
+
+func mergeMapAt(path []string, base, over map[string]any) map[string]any {
 	out := cloneMap(base)
 	for k, ov := range over {
+		kp := append(slices.Clone(path), k)
 		if bv, ok := out[k]; ok {
 			if bm, ok1 := bv.(map[string]any); ok1 {
 				if om, ok2 := ov.(map[string]any); ok2 {
-					out[k] = mergeMap(bm, om)
+					out[k] = mergeMapAt(kp, bm, om)
 					continue
 				}
 			}
 			if bl, ok1 := bv.([]any); ok1 {
 				if ol, ok2 := ov.([]any); ok2 {
-					out[k] = unionAny(bl, ol)
+					if isArgvPath(kp) {
+						out[k] = append(slices.Clone(bl), ol...)
+					} else {
+						out[k] = unionAny(bl, ol)
+					}
 					continue
 				}
 			}
@@ -698,6 +712,16 @@ func mergeMap(base, over map[string]any) map[string]any {
 		out[k] = ov
 	}
 	return out
+}
+
+// isArgvPath reports whether path names an agent argv list, at the top level or inside a
+// profile. An argv repeats tokens (`--add-dir a --add-dir b`), so its layers concatenate
+// instead of merging append-unique.
+func isArgvPath(path []string) bool {
+	if len(path) == 5 && path[0] == "profiles" {
+		path = path[2:]
+	}
+	return slices.Equal(path, []string{"agents", "claude", "args"})
 }
 
 // unionAny concatenates a then b, dropping duplicates by type+value, preserving
