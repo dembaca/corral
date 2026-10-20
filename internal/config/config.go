@@ -234,6 +234,8 @@ agents:
     attributionHeader: true
     agentView: false
     args: []
+  pi:
+    args: []
 providers:
   # --- built-in providers: always active, applied before the feature providers ---
   # Paths the sandbox masks and the hook denies, split by kind: directories are masked
@@ -714,14 +716,14 @@ func mergeMapAt(path []string, base, over map[string]any) map[string]any {
 	return out
 }
 
-// isArgvPath reports whether path names an agent argv list, at the top level or inside a
-// profile. An argv is one command line, so a higher layer replaces it, as Docker Compose
+// isArgvPath reports whether path names an agents.<agent>.args list, at the top level or
+// inside a profile. An argv is one command line, so a higher layer replaces it, as Docker Compose
 // replaces `command` and Kubernetes replaces a container's `args`.
 func isArgvPath(path []string) bool {
 	if len(path) == 5 && path[0] == "profiles" {
 		path = path[2:]
 	}
-	return slices.Equal(path, []string{"agents", "claude", "args"})
+	return len(path) == 3 && path[0] == "agents" && path[2] == "args"
 }
 
 // unionAny concatenates a then b, dropping duplicates by type+value, preserving

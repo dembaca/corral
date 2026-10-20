@@ -1,22 +1,18 @@
 package claude
 
 import (
-	"strings"
-
 	"github.com/go-corral/corral/internal/agents/spec"
 )
 
 type Config struct {
-	ClaudeaiConnectors bool     `yaml:"claudeaiConnectors"`
-	Telemetry          bool     `yaml:"telemetry"`
-	ErrorReporting     bool     `yaml:"errorReporting"`
-	FeedbackSurvey     bool     `yaml:"feedbackSurvey"`
-	AttributionHeader  bool     `yaml:"attributionHeader"`
-	AgentView          bool     `yaml:"agentView"`
-	Args               []string `yaml:"args"`
+	spec.Args          `yaml:",inline"`
+	ClaudeaiConnectors bool `yaml:"claudeaiConnectors"`
+	Telemetry          bool `yaml:"telemetry"`
+	ErrorReporting     bool `yaml:"errorReporting"`
+	FeedbackSurvey     bool `yaml:"feedbackSurvey"`
+	AttributionHeader  bool `yaml:"attributionHeader"`
+	AgentView          bool `yaml:"agentView"`
 }
-
-func (c Config) LaunchArgs() []string { return c.Args }
 
 var _ spec.AgentConfig = Config{}
 
@@ -66,8 +62,5 @@ func (c Config) ValidationFields() []spec.BannerField {
 	if !c.AttributionHeader {
 		fields = append(fields, toggle("Attribution header", false))
 	}
-	if len(c.Args) > 0 {
-		fields = append(fields, spec.BannerField{Label: "Args", Value: strings.Join(c.Args, " ")})
-	}
-	return fields
+	return append(fields, c.ArgsFields()...)
 }

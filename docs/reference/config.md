@@ -9,7 +9,7 @@
 | 3     | `.corral.yml`                                                         | Intended to be commited with the project as project-scoped defaults |
 | 4     | `.corral.local.yml`                                                   | Intended to be gitignored, personal project-scoped settings         |
 
-All settings (profiles too) are merged with lists being appended and uniqued so they can't contain duplicate entries. [`agents.claude.args`](#agentsclaudeargs) is the exception: the highest layer or profile that sets it replaces the whole list. The config syntax is checked and corral aborts when it's invalid.
+All settings (profiles too) are merged with lists being appended and uniqued so they can't contain duplicate entries. [`agents.<agent>.args`](#agentsagentargs) is the exception: the highest layer or profile that sets it replaces the whole list. The config syntax is checked and corral aborts when it's invalid.
 
 Run [`corral validate`](commands.md#corral-validate) to list loaded config files and inspect the effective configuration.
 
@@ -36,6 +36,8 @@ agents:
     feedbackSurvey: false
     attributionHeader: true
     agentView: false
+    args: []
+  pi:
     args: []
 providers:
   block:
@@ -201,29 +203,32 @@ checks this variable before loading account or organization connectors.
 > [`providers.env`](#providersenv)), so an `env.set` entry cannot change them. Use the
 > corresponding `agents.claude` setting instead.
 
-### `agents.claude.args`
+### `agents.pi`
+
+pi has no settings besides [`args`](#agentsagentargs). See
+[the agents reference](agents.md#pi) for pi's fixed sandbox behavior.
+
+### `agents.<agent>.args`
 
 - **Type:** list of strings
 - **Default:** `[]`
-- **Behavior:** arguments that `corral run` passes to Claude Code, before any arguments
-  given after `--`. Each list entry is one argument. The highest config layer or profile
-  that sets `args` replaces the list from lower layers; `args: []` clears it.
+- **Applies to:** `agents.claude.args` and `agents.pi.args`.
+- **Behavior:** arguments that `corral run` passes to the agent it starts, before any
+  arguments given after `--`. pi receives them after its policy extension flag. Each list
+  entry is one argument. The highest config layer or profile that sets `args` replaces the
+  list from lower layers; `args: []` clears it.
 
 ```yaml
 agents:
   claude:
     args: [--model, sonnet, --add-dir, ../shared]
+  pi:
+    args: [--model, sonnet]
 ```
 
-`corral run -- --resume` then starts `claude --model sonnet --add-dir ../shared --resume`.
-
-### `agents.pi`
-
-- **Type:** empty map
-- **Default:** `{}`
-
-pi currently has no agent-specific settings. An explicit `agents.pi: {}` map is accepted
-but unnecessary. See [the agents reference](agents.md#pi) for pi's fixed sandbox behavior.
+With this config, `corral run -- --resume` starts
+`claude --model sonnet --add-dir ../shared --resume`, and `corral run pi` starts
+`pi -e <policy extension> --model sonnet`.
 
 ### `providers`
 

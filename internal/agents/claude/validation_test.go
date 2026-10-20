@@ -1,6 +1,10 @@
 package claude
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/go-corral/corral/internal/agents/spec"
+)
 
 func TestValidationFields(t *testing.T) {
 	for bits := range 64 {
@@ -45,7 +49,7 @@ func TestValidationFields(t *testing.T) {
 }
 
 func TestValidationFieldsArgs(t *testing.T) {
-	fields := Config{AttributionHeader: true, Args: []string{"--model", "sonnet"}}.ValidationFields()
+	fields := Config{AttributionHeader: true, Args: spec.Args{Args: []string{"--model", "sonnet"}}}.ValidationFields()
 	last := fields[len(fields)-1]
 	if last.Label != "Args" || last.Value != "--model sonnet" {
 		t.Errorf("last field = %+v, want Args: --model sonnet", last)

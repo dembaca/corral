@@ -137,6 +137,20 @@ func TestAgentArgsHigherLayerReplaces(t *testing.T) {
 	}
 }
 
+func TestPiArgsHigherLayerReplaces(t *testing.T) {
+	home := "/home/u"
+	global := "agent: pi\nagents:\n  pi:\n    args: [--model, opus]\n"
+	local := "agents:\n  pi:\n    args: [--model, sonnet]\n"
+	cfg, _, err := loadFrom(t, home, global, "", local)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"--model", "sonnet"}
+	if !slices.Equal(cfg.AgentArgs(), want) {
+		t.Errorf("agents.pi.args = %v, want %v", cfg.AgentArgs(), want)
+	}
+}
+
 func TestProfileAgentArgsHigherLayerReplaces(t *testing.T) {
 	home := "/home/u"
 	global := "profiles:\n  p:\n    agents:\n      claude:\n        args: [--add-dir, /a]\n"

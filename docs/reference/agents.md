@@ -93,7 +93,7 @@ elsewhere are unaffected.
 | `agents.claude.feedbackSurvey` | `false` | Disables session-quality surveys. |
 | `agents.claude.attributionHeader` | `true` | Keeps Claude Code's system-prompt attribution block. Set `false` for a local model or gateway that should omit it. |
 | `agents.claude.agentView` | `false` | Disables [agent view](https://code.claude.com/docs/en/agent-view). Its background sessions cannot outlive the sandbox. |
-| `agents.claude.args` | `[]` | Arguments passed to `claude` on every `corral run`, before the arguments after `--`. |
+| `agents.claude.args` | `[]` | Arguments passed to `claude` on every `corral run`, before the arguments after `--`. See [`agents.<agent>.args`](config.md#agentsagentargs). |
 
 `corral validate` reports the connector, telemetry, error-reporting, survey, and
 agent view settings, and the configured arguments. See
@@ -141,5 +141,6 @@ providers:
         value: ""
 ```
 
-pi currently has no keys under `agents.pi`; an empty `agents.pi: {}` block is
-accepted but unnecessary.
+`agents.pi.args` lists arguments passed to `pi` on every `corral run pi`, after the
+policy extension flag and before the arguments after `--`. See
+[`agents.<agent>.args`](config.md#agentsagentargs).
