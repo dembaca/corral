@@ -82,6 +82,9 @@ claude plugin marketplace add --scope user https://github.com/go-corral/corral.g
 claude plugin install --scope user corral-helper@corral
 ```
 
+For opencode, install the same skill as a plugin:
+`opencode plugin add git+https://github.com/go-corral/corral.git`.
+
 Then ask: _"set up corral on this machine"_, _"let the sandboxed claude write to
 ~/work"_, _"why did the sandbox block this command?"_
 
