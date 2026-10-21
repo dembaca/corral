@@ -14,12 +14,11 @@ func TestLaunchArgsPinsStandalone(t *testing.T) {
 		in, want []string
 	}{
 		{nil, []string{"--standalone"}},
-		{[]string{"./src"}, []string{"--standalone", "./src"}},
-		{[]string{"--continue"}, []string{"--standalone", "--continue"}},
-		{[]string{"run", "fix the tests"}, []string{"run", "--standalone", "fix the tests"}},
+		{[]string{"./src"}, []string{"./src", "--standalone"}},
+		{[]string{"run", "fix the tests"}, []string{"run", "fix the tests", "--standalone"}},
 		{[]string{"run", "--standalone", "hi"}, []string{"run", "--standalone", "hi"}},
-		{[]string{"models"}, []string{"models", "--standalone"}},
-		{[]string{"auth", "list"}, []string{"auth", "list"}},
+		{[]string{"run", "--", "--literal"}, []string{"run", "--standalone", "--", "--literal"}},
+		{[]string{"mcp", "list"}, []string{"mcp", "list"}},
 	} {
 		got, err := launchArgs(tc.in)
 		if err != nil {
@@ -38,9 +37,8 @@ func TestLaunchArgsRejects(t *testing.T) {
 		{"run", "--server=http://127.0.0.1:49374", "hi"},
 		{"--auto"},
 		{"run", "--auto", "hi"},
-		{"serve"},
-		{"service", "start"},
-		{"acp"},
+		{"--yolo"},
+		{"run", "--dangerously-skip-permissions", "hi"},
 	} {
 		if got, err := launchArgs(in); err == nil {
 			t.Errorf("launchArgs(%q) = %q, want an error", in, got)

@@ -1656,8 +1656,8 @@ func TestRunOpencodeActivatesPluginAndPinsStandalone(t *testing.T) {
 	if !strings.Contains(out, "OPENCODE_CONFIG_CONTENT=") || !strings.Contains(out, filepath.Dir(plugin)) {
 		t.Errorf("argv does not activate the plugin directory through OPENCODE_CONFIG_CONTENT:\n%s", out)
 	}
-	if !strings.Contains(out, "run --standalone hi") {
-		t.Errorf("argv does not pin --standalone after the subcommand:\n%s", out)
+	if !strings.Contains(out, "run hi --standalone") {
+		t.Errorf("argv does not pin --standalone:\n%s", out)
 	}
 }
 

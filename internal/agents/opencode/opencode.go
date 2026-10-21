@@ -63,49 +63,30 @@ func activationEnv(extensionPath string) map[string]string {
 	return map[string]string{configContentEnv: string(content)}
 }
 
-// Subcommands that accept --standalone. Without it opencode connects to its background service,
-// which runs outside the sandbox or, started inside it, outlives the session.
-var standaloneSubcommands = []string{"run", "mini", "models", "stats"}
+// Subcommands that run locally. They do not take --standalone.
+var localSubcommands = []string{"debug", "mcp", "plugin"}
 
-// Subcommands that run locally without a server.
-var localSubcommands = []string{"auth", "debug", "mcp", "plugin"}
+// Flags that bypass the sandbox (--server) or approve the permission prompts corral uses as its
+// fallback when the policy plugin fails to load.
+var rejectedFlags = []string{"--server", "--auto", "--yolo", "--dangerously-skip-permissions"}
 
-// launchArgs pins every server-backed launch to a private --standalone server and rejects the
-// flags that would bypass the sandbox or the permission fallback.
+// launchArgs appends --standalone, so opencode runs a private server inside the sandbox instead
+// of reaching its background service outside it. opencode rejects --standalone on every
+// subcommand that starts or reaches a server without it, such as serve, acp, and service.
 func launchArgs(args []string) ([]string, error) {
 	for _, a := range args {
-		name, _, _ := strings.Cut(a, "=")
-		switch name {
-		case "--server":
-			return nil, fmt.Errorf("opencode --server connects to a server outside the sandbox; corral runs a private --standalone server")
-		case "--auto":
-			return nil, fmt.Errorf("opencode --auto approves the permission prompts corral uses as its fallback when the policy plugin fails to load")
+		if name, _, _ := strings.Cut(a, "="); slices.Contains(rejectedFlags, name) {
+			return nil, fmt.Errorf("opencode %s is not supported by corral run", name)
 		}
 	}
-	if len(args) == 0 || strings.HasPrefix(args[0], "-") || !isSubcommand(args[0]) {
-		return withStandalone(args, 0), nil
-	}
-	switch {
-	case slices.Contains(standaloneSubcommands, args[0]):
-		return withStandalone(args, 1), nil
-	case slices.Contains(localSubcommands, args[0]):
+	if (len(args) > 0 && slices.Contains(localSubcommands, args[0])) || slices.Contains(args, "--standalone") {
 		return args, nil
 	}
-	return nil, fmt.Errorf("opencode %s is not supported by corral run: it starts or reaches a server outside the session's private one", args[0])
-}
-
-func withStandalone(args []string, at int) []string {
-	if slices.Contains(args, "--standalone") {
-		return args
+	end := len(args)
+	if i := slices.Index(args, "--"); i >= 0 {
+		end = i
 	}
-	out := slices.Clone(args[:at])
-	out = append(out, "--standalone")
-	return append(out, args[at:]...)
-}
-
-// isSubcommand separates a subcommand from the TUI's optional <directory> positional.
-func isSubcommand(arg string) bool {
-	return slices.Contains(standaloneSubcommands, arg) || slices.Contains(localSubcommands, arg) || !strings.ContainsAny(arg, "/.~")
+	return slices.Insert(slices.Clone(args), end, "--standalone"), nil
 }
 
 func (a agent) ConfigPaths() []spec.ConfigPath {
