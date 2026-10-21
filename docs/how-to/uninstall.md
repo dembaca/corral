@@ -47,12 +47,6 @@ command only lists the state and agent integrations it would remove.
      claude plugin marketplace remove corral
      ```
 
-     For opencode:
-
-     ```sh
-     opencode plugin remove git+https://github.com/go-corral/corral.git
-     ```
-
 ## If the binary is already gone
 
 A registered Claude Code hook checks for the corral binary before running it. When the

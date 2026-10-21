@@ -48,12 +48,18 @@ func (agent) Launch() spec.Launch {
 // activationEnv loads the policy plugin directory and adds an `ask` rule for every tool. The
 // plugin turns each ask into allow after its own check; when the plugin fails to load (opencode
 // only warns), the rule makes opencode prompt, or reject in `opencode run`, instead of running
-// tools unchecked.
+// tools unchecked. It also writes the corral-helper skill into the plugin directory, which the
+// sandbox mounts read-only, and loads it; a write failure only drops the skill.
 func activationEnv(extensionPath string) map[string]string {
-	content, _ := json.Marshal(map[string]any{
-		"plugins":     []string{filepath.Dir(extensionPath)},
+	dir := filepath.Dir(extensionPath)
+	cfg := map[string]any{
+		"plugins":     []string{dir},
 		"permissions": []map[string]string{{"action": "*", "resource": "*", "effect": "ask"}},
-	})
+	}
+	if skills, err := materializeSkill(dir); err == nil {
+		cfg["skills"] = []string{skills}
+	}
+	content, _ := json.Marshal(cfg)
 	return map[string]string{configContentEnv: string(content)}
 }
 
