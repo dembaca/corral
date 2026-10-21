@@ -218,15 +218,13 @@ func cmdRun(args []string, version string) int {
 		if launch.ExtensionEnv != nil {
 			// An env-activated extension is loaded as a directory.
 			mount = filepath.Dir(assetPath)
+			maps.Copy(spec.SetEnv, launch.ExtensionEnv(assetPath))
+		} else {
+			extensionArgs = []string{launch.ExtensionFlag, assetPath}
 		}
 		spec.Mounts = append(spec.Mounts, sandbox.Mount{Src: mount, Dst: mount, ReadOnly: true})
 		if self, serr := os.Executable(); serr == nil {
 			spec.SetEnv[sandbox.BinEnvVar] = self
-		}
-		if launch.ExtensionEnv != nil {
-			maps.Copy(spec.SetEnv, launch.ExtensionEnv(assetPath))
-		} else {
-			extensionArgs = []string{launch.ExtensionFlag, assetPath}
 		}
 	}
 	// Phase A — built-in providers (block, aiignore, paths, env, notes). Pure Mint, resolved before the

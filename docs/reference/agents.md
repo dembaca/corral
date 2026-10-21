@@ -155,14 +155,11 @@ prompt.
 corral requires opencode 2.1.0 or later. Older versions fail to start inside the macOS
 sandbox.
 
-corral changes the opencode command line before launch:
-
-| Arguments after `--` | Launched command |
-| --- | --- |
-| none, flags, or a directory | `opencode --standalone ...` |
-| `run`, `mini`, `models`, `stats` | `opencode <subcommand> --standalone ...` |
-| `auth`, `debug`, `mcp`, `plugin` | unchanged |
-| `--server`, `--auto`, or any other subcommand | rejected |
+corral appends `--standalone` to the opencode command line, before any `--`. The `debug`,
+`mcp`, and `plugin` subcommands run locally and stay unchanged. Subcommands that start or
+reach a server without `--standalone`, such as `serve`, `acp`, and `service`, reject the
+flag, so opencode exits with a usage error. corral rejects `--server`, `--auto`, `--yolo`,
+and `--dangerously-skip-permissions`.
 
 `--standalone` keeps the server and its tools inside the sandbox. Without it, opencode
 connects to its background service, which runs outside the session.
@@ -172,7 +169,7 @@ tool. The plugin approves each call that corral allows. If the plugin fails to l
 opencode only logs a warning, so the rule makes opencode prompt for tools that check
 permissions; `opencode run` rejects those calls. Tools without a permission check, such as
 the inner tools of a code-mode script, still run. `--auto` would approve every prompt, so
-corral rejects it. The rule also turns the ask rules in your own opencode config into
+corral rejects it and its aliases. The rule also turns the ask rules in your own opencode config into
 approvals.
 
 `fetch` inside a code-mode `execute` script reaches the network without a policy check,
