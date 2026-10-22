@@ -717,8 +717,7 @@ func mergeMapAt(path []string, base, over map[string]any) map[string]any {
 }
 
 // isArgvPath reports whether path names an agents.<agent>.args list, at the top level or
-// inside a profile. An argv is one command line, so a higher layer replaces it, as Docker Compose
-// replaces `command` and Kubernetes replaces a container's `args`.
+// inside a profile. An argv is one command line, so a higher layer replaces it.
 func isArgvPath(path []string) bool {
 	if len(path) == 5 && path[0] == "profiles" {
 		path = path[2:]
