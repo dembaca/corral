@@ -30,7 +30,7 @@ The skill triggers automatically or can be invoked as `/corral-helper:corral`.
 ### opencode
 
 This repository is also an opencode plugin package. Its root `package.json` points
-opencode at `index.js`, which registers the same skill. Install it from Git:
+opencode at `opencode/index.js`, which registers the same skill. Install it from Git:
 
 ```sh
 opencode plugin add git+https://github.com/go-corral/corral.git
@@ -44,7 +44,7 @@ For a local checkout, add the plugin directory to `plugins` in
 `~/.config/opencode/opencode.json`:
 
 ```json
-{ "plugins": ["/path/to/corral/plugins/corral-helper"] }
+{ "plugins": ["/path/to/corral/plugins/corral-helper/opencode"] }
 ```
 
 Inside corral, that path must be readable: start corral from the checkout, or grant it
@@ -70,7 +70,7 @@ The plugin separates behavioral instructions from product facts:
 The reference tree preserves the canonical docs hierarchy so relative links keep working
 when Claude Code dereferences the symlinks during marketplace installation. The installed
 skill is therefore self-contained. An opencode install from Git drops the symlinks but
-keeps `docs/`, so `index.js` links each missing reference section to its `docs/` section
+keeps `docs/`, so `opencode/index.js` links each missing reference section to its `docs/` section
 when it loads.
 
 ## Maintenance rules
@@ -108,6 +108,7 @@ when it loads.
 plugins/corral-helper/
 ├── .claude-plugin/plugin.json
 ├── README.md
+├── opencode/index.js              # opencode entry point, registers skills/
 └── skills/corral/
     ├── SKILL.md                   # behavior, diagnosis, config rules, reference links
     └── references/

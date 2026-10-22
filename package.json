@@ -2,7 +2,7 @@
   "name": "corral-helper",
   "description": "opencode plugin that ships the corral-helper skill: help installing, configuring, running, and troubleshooting corral.",
   "type": "module",
-  "main": "plugins/corral-helper/index.js",
+  "main": "plugins/corral-helper/opencode/index.js",
   "private": true,
   "license": "MIT"
 }

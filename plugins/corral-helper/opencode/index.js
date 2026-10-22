@@ -7,8 +7,8 @@
 import { existsSync, readdirSync, readFileSync, symlinkSync } from "node:fs";
 import path from "node:path";
 
-const SKILLS_DIR = path.join(import.meta.dirname, "skills");
-const DOCS_DIR = path.join(import.meta.dirname, "..", "..", "docs");
+const SKILLS_DIR = path.join(import.meta.dirname, "..", "skills");
+const DOCS_DIR = path.join(import.meta.dirname, "..", "..", "..", "docs");
 
 // Installs from Git drop the reference symlinks but keep docs/, so link each missing
 // references/<section> to its docs/<section>.
