@@ -1,6 +1,6 @@
 # corral-helper
 
-A Claude Code plugin that helps users install, configure, run, and troubleshoot
+A Claude Code and opencode plugin that helps users install, configure, run, and troubleshoot
 [corral](../../README.md), including corral sessions that run Claude Code, pi, or opencode.
 
 The plugin provides one skill, `corral`. It triggers for setup, config edits, provider
@@ -8,6 +8,8 @@ access, blocked operations, audit logs, always-blocked paths, and related sandbo
 questions.
 
 ## Install
+
+### Claude Code
 
 This repository is a Claude Code plugin marketplace. From Claude Code:
 
@@ -25,9 +27,31 @@ For a local checkout:
 
 The skill triggers automatically or can be invoked as `/corral-helper:corral`.
 
-opencode needs no install inside corral: `corral run opencode` loads the skill from the
-corral binary, which embeds `SKILL.md`, `references/agent.md`, and the docs the reference
-symlinks point to.
+### opencode
+
+This repository is also an opencode plugin package. Its root `package.json` points
+opencode at `index.js`, which registers the same skill. Install it from Git:
+
+```sh
+opencode plugin add git+https://github.com/go-corral/corral.git
+```
+
+Append `#<tag>`, for example `#v0.25.0`, to pin a release. opencode installs the plugin
+under `~/.cache/opencode`, which `corral run opencode` mounts, so the skill also loads
+inside corral sessions.
+
+For a local checkout, add the plugin directory to `plugins` in
+`~/.config/opencode/opencode.json`:
+
+```json
+{ "plugins": ["/path/to/corral/plugins/corral-helper"] }
+```
+
+Inside corral, that path must be readable: start corral from the checkout, or grant it
+with `providers.paths.ro`.
+
+When opencode already has a skill with the ID `corral`, for example from
+`~/.claude/skills`, it keeps that skill.
 
 ## Content ownership
 
@@ -45,7 +69,9 @@ The plugin separates behavioral instructions from product facts:
 
 The reference tree preserves the canonical docs hierarchy so relative links keep working
 when Claude Code dereferences the symlinks during marketplace installation. The installed
-skill is therefore self-contained.
+skill is therefore self-contained. An opencode install from Git drops the symlinks but
+keeps `docs/`, so `index.js` links each missing reference section to its `docs/` section
+when it loads.
 
 ## Maintenance rules
 

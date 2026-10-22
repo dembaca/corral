@@ -152,11 +152,6 @@ every tool. It checks tool calls, including calls from subagents and code-mode `
 scripts. It also scans tool results and prompts, and adds the sandbox note to the system
 prompt.
 
-The same directory holds the [corral-helper](../../plugins/corral-helper/README.md) skill,
-`corral`, which corral embeds in its binary and loads through the `skills` key of
-`OPENCODE_CONFIG_CONTENT`. Every corral session of opencode has the skill without an
-install step, at the version of the corral binary.
-
 corral requires opencode 2.1.0 or later. Older versions fail to start inside the macOS
 sandbox.
 
