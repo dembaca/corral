@@ -141,6 +141,4 @@ providers:
         value: ""
 ```
 
-`agents.pi.args` lists arguments passed to `pi` on every `corral run pi`, after the
-policy extension flag and before the arguments after `--`. See
-[`agents.<agent>.args`](config.md#agentsagentargs).
+`agents.pi.args` adds arguments passed to `pi` on every run. See [`agents.<agent>.args`](config.md#agentsagentargs).
