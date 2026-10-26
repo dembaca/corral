@@ -1633,3 +1633,53 @@ func TestEnvVal(t *testing.T) {
 		t.Errorf(`envVal must not match CLAUDE_CODE_TMPDIR for key "TMPDIR", got %q`, got)
 	}
 }
+
+func TestRunDryRunPassesAgentArgs(t *testing.T) {
+	home := t.TempDir()
+	proj := filepath.Join(home, "proj")
+	if err := os.MkdirAll(proj, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(proj, ".corral.yml"), []byte("agents: {claude: {args: [--model, sonnet]}}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	isolateConfigEnv(t, home, proj)
+
+	var code int
+	out := captureStdout(t, func() {
+		code = cmdRun([]string{"--dry-run", "--home", home, "--project", proj, "--", "--resume"}, "dev")
+	})
+	if code != 0 {
+		t.Fatalf("run --dry-run exit=%d", code)
+	}
+	if !strings.Contains(out, "--model sonnet --resume") {
+		t.Errorf("config args must precede the -- args in the agent argv:\n%s", out)
+	}
+}
+
+func TestRunDryRunPassesPiArgsAfterBridge(t *testing.T) {
+	home := t.TempDir()
+	proj := filepath.Join(home, "proj")
+	if err := os.MkdirAll(proj, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(proj, ".corral.yml"), []byte("agents: {pi: {args: [--model, sonnet]}, claude: {args: [--verbose]}}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	isolateConfigEnv(t, home, proj)
+
+	var code int
+	out := captureStdout(t, func() {
+		code = cmdRun([]string{"pi", "--dry-run", "--home", home, "--project", proj, "--", "--continue"}, "dev")
+	})
+	if code != 0 {
+		t.Fatalf("run pi --dry-run exit=%d", code)
+	}
+	bridge := filepath.Join(home, ".cache", "corral", "corral-policy.ts")
+	if !strings.Contains(out, "-e "+bridge+" --model sonnet --continue") {
+		t.Errorf("pi argv must be bridge, config args, then -- args:\n%s", out)
+	}
+	if strings.Contains(out, "--verbose") {
+		t.Errorf("claude args leaked into the pi argv:\n%s", out)
+	}
+}

@@ -255,6 +255,7 @@ func cmdRun(args []string, version string) int {
 	// The kubernetes provider loads a gated kubeconfig only from bytes with the hash the gate checked.
 	active := activeProviders(cfg, *home, host, projectSrc, kubes.approved(), bannerSessionHookPresenter(os.Stderr, c), hookLog)
 	command := append([]string{commandBin}, extensionArgs...)
+	command = append(command, cfg.AgentArgs()...)
 	command = append(command, fs.Args()...)
 
 	// Side-effect-free preview of phase B: each provider's static, secret-free contribution.

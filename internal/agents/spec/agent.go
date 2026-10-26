@@ -5,6 +5,7 @@ package spec
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/go-corral/corral/internal/health"
 )
@@ -29,9 +30,26 @@ type BannerField struct {
 	Value string
 }
 
+// Args is the `args` setting every agent config embeds inline.
+type Args struct {
+	Args []string `yaml:"args"`
+}
+
+func (a Args) LaunchArgs() []string { return a.Args }
+
+// ArgsFields is the validation row for configured args, empty when none are set.
+func (a Args) ArgsFields() []BannerField {
+	if len(a.Args) == 0 {
+		return nil
+	}
+	return []BannerField{{Label: "Args", Value: strings.Join(a.Args, " ")}}
+}
+
 type AgentConfig interface {
 	SandboxEnv() map[string]string
 	ValidationFields() []BannerField
+	// LaunchArgs are passed to the agent before the `corral run -- ...` arguments.
+	LaunchArgs() []string
 }
 
 type Launch struct {
