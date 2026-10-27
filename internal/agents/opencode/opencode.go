@@ -6,6 +6,7 @@ package opencode
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -49,16 +50,27 @@ func (agent) Launch() spec.Launch {
 // plugin turns each ask into allow after its own check; when the plugin fails to load (opencode
 // only warns), the rule makes opencode prompt, or reject in `opencode run`, instead of running
 // tools unchecked.
+//
+// A host OPENCODE_CONFIG_CONTENT, such as the one a client like Obsidian Copilot passes to
+// `opencode acp`, is kept: the plugin directory is appended to its plugins and the ask rule is
+// put before its permissions, so its own rules still win (opencode applies the last match).
 func activationEnv(extensionPath string) map[string]string {
-	content, _ := json.Marshal(map[string]any{
-		"plugins":     []string{filepath.Dir(extensionPath)},
-		"permissions": []map[string]string{{"action": "*", "resource": "*", "effect": "ask"}},
-	})
+	cfg := map[string]any{}
+	if host := os.Getenv(configContentEnv); host != "" {
+		_ = json.Unmarshal([]byte(host), &cfg)
+	}
+	plugins, _ := cfg["plugins"].([]any)
+	cfg["plugins"] = append(plugins, filepath.Dir(extensionPath))
+	permissions, _ := cfg["permissions"].([]any)
+	ask := map[string]any{"action": "*", "resource": "*", "effect": "ask"}
+	cfg["permissions"] = append([]any{ask}, permissions...)
+	content, _ := json.Marshal(cfg)
 	return map[string]string{configContentEnv: string(content)}
 }
 
-// Subcommands that run locally. They do not take --standalone.
-var localSubcommands = []string{"debug", "mcp", "plugin"}
+// Subcommands that run locally or, like acp, start their own private server inside the sandbox.
+// They do not take --standalone.
+var localSubcommands = []string{"acp", "debug", "mcp", "plugin"}
 
 // Flags that bypass the sandbox (--server) or approve the permission prompts corral uses as its
 // fallback when the policy plugin fails to load.
@@ -66,7 +78,7 @@ var rejectedFlags = []string{"--server", "--auto", "--yolo", "--dangerously-skip
 
 // launchArgs appends --standalone, so opencode runs a private server inside the sandbox instead
 // of reaching its background service outside it. opencode rejects --standalone on every
-// subcommand that starts or reaches a server without it, such as serve, acp, and service.
+// subcommand that starts or reaches a server without it, such as serve and service.
 func launchArgs(args []string) ([]string, error) {
 	for _, a := range args {
 		if name, _, _ := strings.Cut(a, "="); slices.Contains(rejectedFlags, name) {

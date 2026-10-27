@@ -156,9 +156,10 @@ corral requires opencode 2.1.0 or later. Older versions fail to start inside the
 sandbox.
 
 corral appends `--standalone` to the opencode command line, before any `--`. The `debug`,
-`mcp`, and `plugin` subcommands run locally and stay unchanged. Subcommands that start or
-reach a server without `--standalone`, such as `serve`, `acp`, and `service`, reject the
-flag, so opencode exits with a usage error. corral rejects `--server`, `--auto`, `--yolo`,
+`mcp`, and `plugin` subcommands run locally and stay unchanged. `acp` also stays unchanged:
+it starts its own private server inside the sandbox. Subcommands that start or reach a
+server without `--standalone`, such as `serve` and `service`, reject the flag, so opencode
+exits with a usage error. corral rejects `--server`, `--auto`, `--yolo`,
 and `--dangerously-skip-permissions`.
 
 `--standalone` keeps the server and its tools inside the sandbox. Without it, opencode
@@ -171,6 +172,11 @@ permissions; `opencode run` rejects those calls. Tools without a permission chec
 the inner tools of a code-mode script, still run. `--auto` would approve every prompt, so
 corral rejects it and its aliases. The rule also turns the ask rules in your own opencode config into
 approvals.
+
+When the host environment already sets `OPENCODE_CONFIG_CONTENT`, for example because an
+editor integration starts `opencode acp` through corral, corral keeps that config. It adds
+its plugin directory to `plugins` and puts its ask rule before the existing `permissions`,
+so the host rules still apply.
 
 `fetch` inside a code-mode `execute` script reaches the network without a policy check,
 like any other network access from the sandbox.
