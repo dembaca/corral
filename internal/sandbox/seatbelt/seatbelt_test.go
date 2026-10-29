@@ -482,6 +482,46 @@ func TestSeatbeltBlockedLeafMetadataAllowed(t *testing.T) {
 	}
 }
 
+// TestSeatbeltOverlayOverridesBlockedPath: an Overlay mount inside a blocked dir (the
+// ssh provider's ~/.ssh/config) must be re-allowed after the blocked-path deny, else
+// last-match-wins hides it.
+func TestSeatbeltOverlayOverridesBlockedPath(t *testing.T) {
+	spec := fixedMacSpec()
+	spec.Mounts = append(spec.Mounts,
+		sandbox.Mount{Src: "/Users/u/.ssh/config", Dst: "/Users/u/.ssh/config", ReadOnly: true, Overlay: true},
+		sandbox.Mount{Src: "/Users/u/.gnupg/S.gpg-agent.ssh", Dst: "/Users/u/.gnupg/S.gpg-agent.ssh", Overlay: true},
+		sandbox.Mount{Src: "/Users/u/proj/.env", Dst: "/Users/u/proj/.env", ReadOnly: true, Overlay: true},
+	)
+	profile, err := macBackend().profile(withTok(spec, macTestTokens()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	denyIdx := strings.Index(profile, "(deny file-read* file-write* process-exec*\n  (subpath \"/Users/u/.ssh\")")
+	readIdx := strings.Index(profile, "(allow file-read*\n"+
+		"  (subpath \"/Users/u/.ssh/config\")\n"+
+		"  (subpath \"/Users/u/.gnupg/S.gpg-agent.ssh\")\n"+
+		"  (subpath \"/Users/u/proj/.env\")\n)")
+	writeIdx := strings.Index(profile, "(allow file-write-data\n  (subpath \"/Users/u/.gnupg/S.gpg-agent.ssh\")\n)")
+	fileDenyIdx := strings.LastIndex(profile, "(deny file-read* file-write* process-exec*\n"+
+		"  (literal \"/Users/u/.netrc\")\n  (literal \"/Users/u/proj/.env\")\n)")
+	if denyIdx < 0 || readIdx < 0 || writeIdx < 0 || fileDenyIdx < 0 {
+		t.Fatalf("missing blocked-path deny, overlay re-allow, or block.files re-deny; profile:\n%s", profile)
+	}
+	if readIdx < denyIdx || writeIdx < denyIdx {
+		t.Error("overlay re-allow must come AFTER the blocked-path deny (last-match-wins)")
+	}
+	if fileDenyIdx < readIdx {
+		t.Error("block.files re-deny must come AFTER the overlay re-allow, so a blocked file stays denied")
+	}
+	after := profile[denyIdx:]
+	if strings.Contains(after, "(allow process-exec*") {
+		t.Error("overlay must not regain exec after the deny")
+	}
+	if strings.Contains(after, "(allow file-write*") {
+		t.Error("a read-write overlay must regain only file-write-data, not unlink/create on the node")
+	}
+}
+
 func TestSeatbeltVarDeniedByAbsence(t *testing.T) {
 	// The broad /private/var content grant is removed, so /var/folders (other
 	// processes' temp+cache) and the rest of /var content are denied by absence — no
