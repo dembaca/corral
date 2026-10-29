@@ -4,9 +4,11 @@ package ssh
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -161,7 +163,7 @@ func (s *ssh) collectConfigFiles() []sshFile {
 			return "", false
 		}
 		real, err := filepath.EvalSymlinks(dst)
-		if err != nil || !spec.IsRegular(real) || s.isForbidden(real) || seen[real] {
+		if err != nil || !spec.IsRegular(real) || s.isForbidden(real) || seen[real] || isPrivateKey(real) {
 			return "", false
 		}
 		seen[real] = true
@@ -275,6 +277,24 @@ func splitArgs(s string) []string {
 	}
 	flush()
 	return args
+}
+
+// isPrivateKey reports whether the file at path holds a PEM or PuTTY private key,
+// so an Include glob such as `Include *` cannot overlay a key from ~/.ssh. An
+// unreadable file counts as a key.
+func isPrivateKey(path string) bool {
+	f, err := os.Open(path)
+	if err != nil {
+		return true
+	}
+	defer func() { _ = f.Close() }()
+	head := make([]byte, 64<<10)
+	n, err := io.ReadFull(f, head)
+	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+	head = head[:n]
+	return bytes.Contains(head, []byte("PRIVATE KEY-----")) || bytes.Contains(head, []byte("PuTTY-User-Key-File-"))
 }
 
 // isForbidden reports whether a resolved real path is at or under any
