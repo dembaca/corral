@@ -2,6 +2,9 @@ package ssh
 
 import (
 	"context"
+	"crypto/ed25519"
+	"crypto/x509"
+	"encoding/pem"
 	"net"
 	"os"
 	"path/filepath"
@@ -164,6 +167,45 @@ func TestSSHMintFollowsIncludes(t *testing.T) {
 	}
 	if m := findMount(c.Mounts, extra); m == nil || !m.Overlay || !m.ReadOnly {
 		t.Errorf("included file %s should be overlaid ro: %+v", extra, c.Mounts)
+	}
+}
+
+// TestSSHMintSkipsPrivateKeys: an Include glob that also matches key files in ~/.ssh
+// overlays the config files only, never a private key, also when reached via a symlink.
+func TestSSHMintSkipsPrivateKeys(t *testing.T) {
+	home := sshHome(t)
+	sshDir := filepath.Join(home, ".ssh")
+	writeSSHFile(t, filepath.Join(sshDir, "config"), "Include *\nHost x\n")
+	extra := filepath.Join(sshDir, "hosts.conf")
+	writeSSHFile(t, extra, "Host extra\n")
+
+	_, priv, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	der, err := x509.MarshalPKCS8PrivateKey(priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keys := []string{"id_openssh", "id_pkcs8", "id_putty.ppk", "linked"}
+	writeSSHFile(t, filepath.Join(sshDir, keys[0]), string(pem.EncodeToMemory(&pem.Block{Type: "OPENSSH PRIVATE KEY", Bytes: der})))
+	writeSSHFile(t, filepath.Join(sshDir, keys[1]), string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der})))
+	writeSSHFile(t, filepath.Join(sshDir, keys[2]), "PuTTY-User-Key-File-3: ssh-ed25519\n")
+	if err := os.Symlink(keys[0], filepath.Join(sshDir, keys[3])); err != nil {
+		t.Fatal(err)
+	}
+
+	c, err := New(home, "", nil).Mint(context.Background(), spec.Session{}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, k := range keys {
+		if m := findMount(c.Mounts, filepath.Join(sshDir, k)); m != nil {
+			t.Errorf("private key %s must not be overlaid: %+v", k, m)
+		}
+	}
+	if m := findMount(c.Mounts, extra); m == nil {
+		t.Errorf("included config %s should still be overlaid: %+v", extra, c.Mounts)
 	}
 }
 
