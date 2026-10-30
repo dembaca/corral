@@ -212,6 +212,7 @@ func (b Backend) profile(spec sandbox.SandboxSpec) (string, error) {
 	read, write, homePaths := compileMacOSBaseline(sandbox.RulesFor(spec), spec.Tokens, b.resolve)
 
 	var mountSeeds []string
+	var overlayRead, overlayWrite []sbItem
 	for _, m := range spec.Mounts {
 		if m.Src == "" || !path.IsAbs(m.Src) {
 			return "", fmt.Errorf("sandbox: mount source must be an absolute path, got %q", m.Src)
@@ -221,6 +222,12 @@ func (b Backend) profile(spec sandbox.SandboxSpec) (string, error) {
 		read = append(read, it)
 		if !m.ReadOnly {
 			write = append(write, it)
+		}
+		if m.Overlay {
+			overlayRead = append(overlayRead, it)
+			if !m.ReadOnly {
+				overlayWrite = append(overlayWrite, it)
+			}
 		}
 		mountSeeds = append(mountSeeds, val)
 	}
@@ -316,6 +323,34 @@ func (b Backend) profile(spec sandbox.SandboxSpec) (string, error) {
 			}
 			sb.WriteString(")\n\n")
 		}
+	}
+
+	if len(overlayRead) > 0 {
+		sb.WriteString(";; Overlay mounts: vetted files inside a blocked dir (e.g. the ssh provider's\n")
+		sb.WriteString(";; ~/.ssh/config). Placed after the blocked-path deny so they win. Exec stays\n")
+		sb.WriteString(";; denied. A read-write overlay regains only file-write-data: a socket can be\n")
+		sb.WriteString(";; connected to, but the node cannot be removed or replaced.\n")
+		sb.WriteString("(allow file-read*\n")
+		for _, it := range overlayRead {
+			fmt.Fprintf(&sb, "  %s\n", it.sbpl())
+		}
+		sb.WriteString(")\n")
+		if len(overlayWrite) > 0 {
+			sb.WriteString("(allow file-write-data\n")
+			for _, it := range overlayWrite {
+				fmt.Fprintf(&sb, "  %s\n", it.sbpl())
+			}
+			sb.WriteString(")\n")
+		}
+		if len(spec.BlockedFiles) > 0 {
+			sb.WriteString(";; block.files stay denied even under an overlay.\n")
+			sb.WriteString("(deny file-read* file-write* process-exec*\n")
+			for _, p := range spec.BlockedFiles {
+				fmt.Fprintf(&sb, "  (literal \"%s\")\n", sbplEscape(normalizeMacPath(p)))
+			}
+			sb.WriteString(")\n")
+		}
+		sb.WriteString("\n")
 	}
 
 	if spec.Net == sandbox.NetNone {
