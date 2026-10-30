@@ -522,6 +522,26 @@ func TestSeatbeltOverlayOverridesBlockedPath(t *testing.T) {
 	}
 }
 
+// TestSeatbeltReadWriteOverlayNoBroadWrite: a read-write overlay outside any blocked dir (the
+// launchd ssh-agent socket) gets only file-write-data, so it cannot be removed or replaced.
+func TestSeatbeltReadWriteOverlayNoBroadWrite(t *testing.T) {
+	sock := "/private/tmp/com.apple.launchd.abc/Listeners"
+	spec := fixedMacSpec()
+	spec.Mounts = append(spec.Mounts, sandbox.Mount{Src: sock, Dst: sock, Overlay: true})
+	profile, err := macBackend().profile(withTok(spec, macTestTokens()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, rest, _ := strings.Cut(profile, "(allow file-write*\n")
+	writeAllow, _, _ := strings.Cut(rest, "\n)")
+	if strings.Contains(writeAllow, sock) {
+		t.Errorf("read-write overlay must not be in the file-write* allow:\n%s", writeAllow)
+	}
+	if !strings.Contains(profile, "(allow file-write-data\n  (subpath \""+sock+"\")\n)") {
+		t.Errorf("read-write overlay must get file-write-data; profile:\n%s", profile)
+	}
+}
+
 func TestSeatbeltVarDeniedByAbsence(t *testing.T) {
 	// The broad /private/var content grant is removed, so /var/folders (other
 	// processes' temp+cache) and the rest of /var content are denied by absence — no
