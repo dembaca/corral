@@ -17,7 +17,8 @@ const overlayClientEnv = "CORRAL_TEST_OVERLAY_CLIENT"
 // Under the generated profile, an Overlay mount inside a blocked dir is usable while the rest of
 // the dir stays hidden, even though an ancestor of the dir is writable: the ssh provider's
 // ~/.ssh/config reads, a key file next to it does not, and the forwarded agent socket connects
-// but cannot be removed. A block.files entry stays denied under an overlay.
+// but cannot be removed, inside or outside the blocked dir. A block.files entry stays denied
+// under an overlay.
 func TestGeneratedProfileOverlayInBlockedDir(t *testing.T) {
 	if p := os.Getenv(overlayClientEnv); p != "" {
 		overlayClient(t, p)
@@ -62,6 +63,18 @@ func TestGeneratedProfileOverlayInBlockedDir(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = l.Close() }()
+	// Like the launchd agent socket: outside any blocked dir and outside every other grant.
+	out := parent + "-out"
+	if err := os.Mkdir(out, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(out) })
+	outSock := filepath.Join(out, "agent.sock")
+	lo, err := net.Listen("unix", outSock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = lo.Close() }()
 
 	spec := sandbox.SandboxSpec{
 		Tokens: map[string]string{"HOME": home},
@@ -72,6 +85,7 @@ func TestGeneratedProfileOverlayInBlockedDir(t *testing.T) {
 			{Src: parent},
 			{Src: filepath.Join(sshDir, "config"), ReadOnly: true, Overlay: true},
 			{Src: sock, Overlay: true},
+			{Src: outSock, Overlay: true},
 			{Src: filepath.Join(parent, "hosts"), ReadOnly: true, Overlay: true},
 		},
 		BlockedPaths: []string{sshDir},
@@ -86,8 +100,10 @@ func TestGeneratedProfileOverlayInBlockedDir(t *testing.T) {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("in-sandbox client failed: %v\n%s", err, out)
 	}
-	if _, err := os.Stat(sock); err != nil {
-		t.Errorf("agent socket must survive the session: %v", err)
+	for _, s := range []string{sock, outSock} {
+		if _, err := os.Stat(s); err != nil {
+			t.Errorf("agent socket must survive the session: %v", err)
+		}
 	}
 }
 
@@ -119,13 +135,14 @@ func overlayClient(t *testing.T, parent string) {
 		t.Error("client: reading a block.files entry must fail even under an overlay")
 	}
 
-	sock := filepath.Join(sshDir, "agent.sock")
-	conn, err := net.Dial("unix", sock)
-	if err != nil {
-		t.Fatalf("client: connecting to the read-write overlay socket must succeed: %v", err)
-	}
-	_ = conn.Close()
-	if err := os.Remove(sock); err == nil {
-		t.Error("client: removing the read-write overlay socket must fail")
+	for _, sock := range []string{filepath.Join(sshDir, "agent.sock"), filepath.Join(parent+"-out", "agent.sock")} {
+		conn, err := net.Dial("unix", sock)
+		if err != nil {
+			t.Fatalf("client: connecting to the read-write overlay socket %s must succeed: %v", sock, err)
+		}
+		_ = conn.Close()
+		if err := os.Remove(sock); err == nil {
+			t.Errorf("client: removing the read-write overlay socket %s must fail", sock)
+		}
 	}
 }
